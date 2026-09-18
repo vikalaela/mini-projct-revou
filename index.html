@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense & Budget Visualizer</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <div class="app-wrapper">
+
+    <!-- ── HEADER ── -->
+    <header class="app-header">
+      <h1>💰 Budget Visualizer 💰</h1>
+      <p class="subtitle">Track your daily spending</p>
+    </header>
+
+    <!-- ── TOTAL BALANCE ── -->
+    <section class="balance-card" aria-label="Total Balance">
+      <span class="balance-label">Total Spent</span>
+      <span class="balance-amount" id="totalBalance">Rp 0</span>
+    </section>
+
+    <!-- ── TABS ── -->
+    <nav class="tabs" role="tablist" aria-label="Main navigation">
+      <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="transactions">Transactions</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" data-tab="summary">Monthly Summary</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" data-tab="chart">Chart</button>
+    </nav>
+
+    <!-- ══════════════════════════════════════════
+         TAB: TRANSACTIONS
+    ══════════════════════════════════════════ -->
+    <section class="tab-panel active" id="tab-transactions" role="tabpanel">
+
+      <!-- Add Transaction Form -->
+      <div class="card">
+        <h2 class="card-title">Add Transaction</h2>
+
+        <form id="transactionForm" novalidate>
+          <div class="form-group">
+            <label for="itemName">Item Name</label>
+            <input type="text" id="itemName" placeholder="e.g. Lunch, Grab, Coffee…" autocomplete="off" />
+            <span class="field-error" id="err-itemName"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="amount">Amount (Rp)</label>
+            <input type="text" id="amount" placeholder="e.g. 200.000" inputmode="numeric" autocomplete="off" />
+            <span class="field-error" id="err-amount"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="transactionDate">Date</label>
+            <input type="date" id="transactionDate" />
+            <span class="field-error" id="err-transactionDate"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="category">Category</label>
+            <div class="select-row">
+              <select id="category">
+                <option value="">-- Select category --</option>
+                <option value="Food">🍔 Food</option>
+                <option value="Transport">🚗 Transport</option>
+                <option value="Fun">🎉 Fun</option>
+              </select>
+              <button type="button" class="btn-icon" id="openAddCategory" title="Add custom category" aria-label="Add custom category">＋</button>
+            </div>
+            <span class="field-error" id="err-category"></span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full">Add Transaction</button>
+        </form>
+      </div>
+
+      <!-- Sort Controls -->
+      <div class="sort-bar">
+        <label for="sortSelect">Sort by:</label>
+        <select id="sortSelect">
+          <option value="date-desc">Date (newest)</option>
+          <option value="date-asc">Date (oldest)</option>
+          <option value="amount-desc">Amount (high → low)</option>
+          <option value="amount-asc">Amount (low → high)</option>
+          <option value="category-asc">Category (A → Z)</option>
+        </select>
+      </div>
+
+      <!-- Transaction List -->
+      <div class="transaction-list-wrapper" aria-label="Transaction list">
+        <ul class="transaction-list" id="transactionList">
+          <!-- populated by JS -->
+        </ul>
+        <p class="empty-state" id="emptyState" hidden>No transactions yet. Add one above!</p>
+      </div>
+
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         TAB: MONTHLY SUMMARY
+    ══════════════════════════════════════════ -->
+    <section class="tab-panel" id="tab-summary" role="tabpanel" hidden>
+
+      <div class="card">
+        <h2 class="card-title">Monthly Summary</h2>
+
+        <div class="month-nav">
+          <button class="btn-icon" id="prevMonth" aria-label="Previous month">&#8249;</button>
+          <span class="month-label" id="monthLabel"></span>
+          <button class="btn-icon" id="nextMonth" aria-label="Next month">&#8250;</button>
+        </div>
+
+        <div class="summary-total">
+          <span>Total this month:</span>
+          <strong id="summaryTotal">Rp 0</strong>
+        </div>
+
+        <ul class="summary-category-list" id="summaryCategoryList">
+          <!-- populated by JS -->
+        </ul>
+
+        <p class="empty-state" id="summaryEmpty" hidden>No transactions for this month.</p>
+      </div>
+
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         TAB: CHART
+    ══════════════════════════════════════════ -->
+    <section class="tab-panel" id="tab-chart" role="tabpanel" hidden>
+
+      <div class="card">
+        <h2 class="card-title">Spending by Category</h2>
+        <div class="chart-container">
+          <canvas id="pieChart" aria-label="Spending pie chart" role="img"></canvas>
+        </div>
+        <p class="empty-state" id="chartEmpty" hidden>Add transactions to see the chart.</p>
+      </div>
+
+    </section>
+
+  </div><!-- /.app-wrapper -->
+
+  <!-- ── CUSTOM CATEGORY MODAL ── -->
+  <div class="modal-overlay" id="categoryModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+    <div class="modal">
+      <h3 id="modalTitle">Add Custom Category</h3>
+      <div class="form-group">
+        <label for="newCategoryName">Category Name</label>
+        <input type="text" id="newCategoryName" placeholder="e.g. Shopping, Health…" autocomplete="off" />
+        <span class="field-error" id="err-newCategory"></span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelCategory">Cancel</button>
+        <button class="btn btn-primary"   id="saveCategory">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
